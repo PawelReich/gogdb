@@ -70,6 +70,17 @@ func main() {
 
 	fmt.Println(string(str))
 
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlQ:
+			app.Stop()
+		case tcell.KeyCtrlC:
+			gdb.Interrupt()
+			return nil
+		}
+		return event
+	})
+
 	err = app.SetRoot(commandPrompt.Pane, true).SetFocus(commandPrompt.Pane).Run()
 	if err != nil {
 		panic(err)
