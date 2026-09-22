@@ -43,6 +43,16 @@ func (gdb *GdbClient) Send(operation string, args ...string) (map[string]any, er
 	return ret, err
 }
 
+func (gdb *GdbClient) SendAsync(operation string, args ...string) <-chan AsyncResult {
+	ch := make(chan AsyncResult, 1)
+	go func() {
+		res, err := gdb.gdb.Send(operation, args...)
+		ch <- AsyncResult{Result: res, Error: err}
+		close(ch)
+	}()
+	return ch
+}
+
 func (gdb *GdbClient) Close() {
 	if gdb.notifications != nil {
 		close(gdb.notifications)
