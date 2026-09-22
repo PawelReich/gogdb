@@ -18,6 +18,7 @@ type CommandPrompt struct {
 	input   *tview.InputField
 
 	gdbClient   *client.GdbClient
+	lastCommand string
 }
 
 func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *CommandPrompt {
@@ -39,6 +40,12 @@ func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *Command
 		}
 
 		command := cmdPrompt.GetText()
+		if command == "" {
+			command = view.lastCommand
+		} else {
+			view.lastCommand = command
+		}
+
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
 
 		fut := client.SendAsync("interpreter-exec", "console", command)
