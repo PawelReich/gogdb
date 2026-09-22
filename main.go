@@ -77,7 +77,14 @@ func main() {
 		case tcell.KeyCtrlC:
 			gdb.Interrupt()
 			return nil
+		case tcell.KeyTab:
+			if codeView.Pane.HasFocus() {
+				app.SetFocus(commandPrompt.Pane)
+			} else {
+				app.SetFocus(codeView.Pane)
+			}
 		}
+
 		return event
 	})
 
