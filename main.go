@@ -16,8 +16,6 @@ func flatten(value map[string]any) ([]byte, error) {
 }
 
 func main() {
-	fmt.Println("gogdb")
-
 	gdb, err := client.New()
 
 	if err != nil {
