@@ -8,7 +8,6 @@ import (
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
-	"github.com/mitchellh/mapstructure"
 	"github.com/rivo/tview"
 )
 
@@ -41,7 +40,7 @@ func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
 
 		view.Pane.SetTitle(title)
 
-		disas := <-view.DisassembleAroundPC()
+		disas := <-view.gdbClient.DisassembleAroundPC()
 		if disas.Error != nil {
 			panic(disas.Error)
 		}
@@ -49,22 +48,7 @@ func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
 	})
 }
 
-type Instruction struct {
-	Address string `mapstructure:"address"`
-	Inst    string `mapstructure:"inst"`
-	Func    string `mapstructure:"func"`
-}
-
-type GdbAsmDisassemblyPayload struct {
-	AsmInsns []Instruction `mapstructure:"asm_insns"`
-}
-
-type AsyncDisassemblyResult struct {
-	Result GdbAsmDisassemblyPayload
-	Error  error
-}
-
-func (view *CodeView) PrettyPrintDisassembly(disas *GdbAsmDisassemblyPayload, pc string) string {
+func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassemblyPayload, pc string) string {
 	var sb strings.Builder
 
 	lexer := lexers.Get("gas")
@@ -118,31 +102,4 @@ func (view *CodeView) PrettyPrintDisassembly(disas *GdbAsmDisassemblyPayload, pc
 	}
 
 	return sb.String()
-}
-
-func (view *CodeView) DisassembleAroundPC() <-chan AsyncDisassemblyResult {
-
-	ch := make(chan AsyncDisassemblyResult, 1)
-
-	fut := view.gdbClient.SendAsync("data-disassemble", "-s", "$pc-128", "-e", "$pc+128", "--", "0")
-	go func() {
-		res := <-fut
-		cmdres := AsyncDisassemblyResult{}
-
-		if res.Error != nil {
-			panic(res.Error)
-			cmdres.Error = res.Error
-		} else {
-			err := mapstructure.Decode(res.Result["payload"], &cmdres.Result)
-			if err != nil {
-				panic(err)
-				cmdres.Error = err
-			}
-		}
-
-		ch <- cmdres
-		close(ch)
-	}()
-
-	return ch
 }
