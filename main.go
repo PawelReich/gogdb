@@ -30,6 +30,7 @@ func main() {
 
 	app := tview.NewApplication()
 	commandPrompt := tui.NewCommandPrompt(app, gdb)
+	diassemblyView := tui.NewDisassemblyView(app, gdb)
 
 	go func() {
 		for notification := range gdb.Notifications() {
@@ -37,6 +38,18 @@ func main() {
 			app.QueueUpdateDraw(func() {
 				var color string
 				var str string
+
+				if notification["class"] == "stopped" {
+
+					frame, err := gdb.ParseFrame(notification)
+					if err != nil {
+						panic(err)
+					}
+
+					go func() {
+						diassemblyView.Update(frame)
+					}()
+				}
 
 				switch notification["type"] {
 				case "console":
@@ -78,17 +91,22 @@ func main() {
 			gdb.Interrupt()
 			return nil
 		case tcell.KeyTab:
-			if codeView.Pane.HasFocus() {
+			if diassemblyView.Pane.HasFocus() {
 				app.SetFocus(commandPrompt.Pane)
 			} else {
-				app.SetFocus(codeView.Pane)
+				app.SetFocus(diassemblyView.Pane)
 			}
 		}
 
 		return event
 	})
 
-	err = app.SetRoot(commandPrompt.Pane, true).SetFocus(commandPrompt.Pane).Run()
+	grid := tview.NewGrid()
+	grid.SetRows(0, 20)
+	grid.AddItem(diassemblyView.Pane, 0, 0, 1, 1, 0, 0, false)
+	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 1, 0, 0, false)
+
+	err = app.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
 	if err != nil {
 		panic(err)
 	}
