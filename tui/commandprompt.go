@@ -63,6 +63,20 @@ func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *Command
 	flex.AddItem(cmdHistory, 0, 1, false)
 	flex.AddItem(cmdPrompt, 1, 0, true)
 
+	flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyPgUp:
+			cmdHistory.ScrollTo(-20, 0)
+		case tcell.KeyPgDn:
+			cmdHistory.ScrollTo(20, 0)
+		case tcell.KeyUp:
+			cmdHistory.ScrollTo(-1, 0)
+		case tcell.KeyDown:
+			cmdHistory.ScrollTo(1, 0)
+		}
+		return event
+	})
+
 	view.Pane = flex
 
 	return view
