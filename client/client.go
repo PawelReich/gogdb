@@ -2,7 +2,6 @@ package client
 
 import (
 	"github.com/cyrus-and/gdb"
-	"github.com/mitchellh/mapstructure"
 )
 
 type AsyncResult struct {
@@ -65,23 +64,4 @@ func (gdb *GdbClient) Close() {
 
 func (gdb *GdbClient) Notifications() <-chan map[string]any {
 	return gdb.notifications
-}
-
-type StoppedPayload struct {
-	Frame StoppedFrame
-}
-type StoppedFrame struct {
-	Address      string `mapstructure:"addr"`
-	Architecture string `mapstructure:"arch"`
-}
-
-func (gdb *GdbClient) ParseFrame(frame map[string]any) (*StoppedFrame, error) {
-	var decodedPayload StoppedPayload
-
-	err := mapstructure.Decode(frame["payload"], &decodedPayload)
-	if err != nil {
-		return nil, err
-	}
-
-	return &decodedPayload.Frame, err
 }
