@@ -1,25 +1,27 @@
 package client
 
 import (
-	"fmt"
 	"github.com/cyrus-and/gdb"
 )
 
-func handleGdbNotification(notification map[string]any) {
-	fmt.Println(notification)
+type AsyncResult struct {
+	Result map[string]any
+	Error  error
 }
 
 type GdbClient struct {
 	gdb           *gdb.Gdb
-	notifications chan string
+	notifications chan map[string]any
 }
 
 func New() (*GdbClient, error) {
 	gdbClient := &GdbClient{
-		notifications: make(chan string),
+		notifications: make(chan map[string]any, 512),
 	}
 
-	gdb, err := gdb.New(handleGdbNotification)
+	gdb, err := gdb.New(func(notification map[string]any) {
+		gdbClient.notifications <- notification
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -48,4 +50,8 @@ func (gdb *GdbClient) Close() {
 	if gdb.gdb != nil {
 		gdb.gdb.Exit()
 	}
+}
+
+func (gdb *GdbClient) Notifications() <-chan map[string]any {
+	return gdb.notifications
 }
