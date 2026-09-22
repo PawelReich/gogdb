@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/PawelReich/gogdb/client"
-	"os"
 )
 
 func flatten(value map[string]any) ([]byte, error) {
@@ -19,15 +18,13 @@ func main() {
 	gdb, err := client.New()
 
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	ret, err := gdb.Send("target-select", "remote", ":3333")
 
 	if err != nil {
-		fmt.Printf("err: %s", err)
-		os.Exit(1)
+		panic(err)
 	}
 
 	str, err := flatten(ret)
