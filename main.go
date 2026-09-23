@@ -28,14 +28,18 @@ func main() {
 		panic(err)
 	}
 
-	app := tview.NewApplication()
-	commandPrompt := tui.NewCommandPrompt(app, gdb)
-	diassemblyView := tui.NewDisassemblyView(app, gdb)
+	ui := tview.NewApplication()
+
+	app := &tui.GoGdb{Ui: ui, Debugger: gdb}
+
+	commandPrompt := tui.NewCommandPrompt(app)
+	app.CommandPrompt = commandPrompt
+	diassemblyView := tui.NewDisassemblyView(app)
 
 	go func() {
 		for notification := range gdb.Notifications() {
 
-			app.QueueUpdateDraw(func() {
+			app.Ui.QueueUpdateDraw(func() {
 				var color string
 				var str string
 
@@ -83,18 +87,18 @@ func main() {
 
 	fmt.Println(string(str))
 
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	app.Ui.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlQ:
-			app.Stop()
+			app.Ui.Stop()
 		case tcell.KeyCtrlC:
 			gdb.Interrupt()
 			return nil
 		case tcell.KeyTab:
 			if diassemblyView.Pane.HasFocus() {
-				app.SetFocus(commandPrompt.Pane)
+				app.Ui.SetFocus(commandPrompt.Pane)
 			} else {
-				app.SetFocus(diassemblyView.Pane)
+				app.Ui.SetFocus(diassemblyView.Pane)
 			}
 		}
 
@@ -106,7 +110,7 @@ func main() {
 	grid.AddItem(diassemblyView.Pane, 0, 0, 1, 1, 0, 0, false)
 	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 1, 0, 0, false)
 
-	err = app.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
+	err = app.Ui.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
 	if err != nil {
 		panic(err)
 	}

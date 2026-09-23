@@ -14,36 +14,31 @@ import (
 type DisassemblyView struct {
 	Pane *tview.TextView
 
-	gdbClient *client.GdbClient
-	app       *tview.Application
+	app *GoGdb
 }
 
-func NewDisassemblyView(app *tview.Application, client *client.GdbClient) *DisassemblyView {
+func NewDisassemblyView(app *GoGdb) *DisassemblyView {
+	textView := tview.NewTextView()
+	textView.SetDynamicColors(true)
+	textView.SetScrollable(true)
+	textView.SetBorder(true)
+	textView.SetTitle(tview.Escape("Disassembly [none]"))
 
-	view := &DisassemblyView{gdbClient: client}
-
-	textArea := tview.NewTextView()
-	textArea.SetDynamicColors(true)
-	textArea.SetScrollable(true)
-	textArea.SetBorder(true)
-	textArea.SetTitle(tview.Escape("Disassembly [none]"))
-
-	view.Pane = textArea
-	view.app = app
-
-	return view
+	return &DisassemblyView{app: app, Pane: textView}
 }
 
 func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
-	view.app.QueueUpdateDraw(func() {
-		title := tview.Escape(fmt.Sprintf("Disassembly [%s]", frame.Architecture))
 
-		view.Pane.SetTitle(title)
-
-		disas := <-view.gdbClient.DisassembleAroundPC()
+	fut := view.app.Debugger.DisassembleAroundPC()
+	view.app.Ui.QueueUpdateDraw(func() {
+		disas := <-fut
 		if disas.Error != nil {
 			panic(disas.Error)
 		}
+
+		title := tview.Escape(fmt.Sprintf("Disassembly [%s]", frame.Architecture))
+		view.Pane.SetTitle(title)
+
 		view.Pane.SetText(view.PrettyPrintDisassembly(&disas.Result, frame.Address))
 	})
 }

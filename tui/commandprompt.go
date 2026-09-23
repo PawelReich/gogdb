@@ -1,8 +1,6 @@
 package tui
 
 import (
-	"github.com/PawelReich/gogdb/client"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -17,23 +15,23 @@ type CommandPrompt struct {
 	history *tview.TextView
 	input   *tview.InputField
 
-	gdbClient   *client.GdbClient
+	app         *GoGdb
 	lastCommand string
 }
 
-func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *CommandPrompt {
-
-	view := &CommandPrompt{gdbClient: client}
-
+func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 	cmdHistory := tview.NewTextView()
 	cmdHistory.SetDynamicColors(true)
 	cmdHistory.SetScrollable(true)
 
-	view.history = cmdHistory
-
 	cmdPrompt := tview.NewInputField()
 	cmdPrompt.SetLabel(Prompt)
-	cmdPrompt.SetBackgroundColor(tcell.ColorDarkGrey)
+	cmdPrompt.SetFieldBackgroundColor(tcell.ColorBlack)
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow)
+
+	view := &CommandPrompt{app: app, history: cmdHistory, input: cmdPrompt, Pane: flex}
+
 	cmdPrompt.SetDoneFunc(func(key tcell.Key) {
 		if key != tcell.KeyEnter {
 			return
@@ -48,23 +46,17 @@ func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *Command
 
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
 
-		fut := client.SendAsync("interpreter-exec", "console", command)
+		fut := app.Debugger.SendAsync("interpreter-exec", "console", command)
+
 		go func() {
 			res := <-fut
+			app.LogMap(res.Result)
 
-			app.QueueUpdateDraw(func() {
-
-				fmt.Fprintf(cmdHistory, "[grey]%s\n", res.Result)
-
-				cmdPrompt.SetText("")
-				cmdHistory.ScrollToEnd()
-			})
+			cmdPrompt.SetText("")
+			cmdHistory.ScrollToEnd()
 		}()
 	})
 
-	view.input = cmdPrompt
-
-	flex := tview.NewFlex().SetDirection(tview.FlexRow)
 	flex.SetBorder(true)
 	flex.SetTitle("Command Prompt")
 	flex.AddItem(cmdHistory, 0, 1, false)
@@ -83,8 +75,6 @@ func NewCommandPrompt(app *tview.Application, client *client.GdbClient) *Command
 		}
 		return event
 	})
-
-	view.Pane = flex
 
 	return view
 }
