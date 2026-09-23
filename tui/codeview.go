@@ -7,9 +7,9 @@ import (
 )
 
 type CodeView struct {
+	*View
 	Pane *tview.TextView
 
-	app   *GoGdb
 	title string
 }
 
@@ -19,7 +19,7 @@ func NewCodeView(app *GoGdb, title string) *CodeView {
 	textView.SetScrollable(true)
 	textView.SetBorder(true)
 
-	view := &CodeView{app: app, title: title, Pane: textView}
+	view := &CodeView{View: NewView(app), title: title, Pane: textView}
 
 	view.SetTitle("none")
 

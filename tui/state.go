@@ -10,3 +10,11 @@ type GoGdb struct {
 	CommandPrompt *CommandPrompt
 	Debugger      *client.GdbClient
 }
+
+type View struct {
+	app *GoGdb
+}
+
+func NewView(app *GoGdb) *View {
+	return &View{app: app}
+}
