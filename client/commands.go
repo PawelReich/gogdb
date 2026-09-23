@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"strconv"
 )
 
 func (gdb *GdbClient) Interrupt() {
@@ -35,4 +36,64 @@ type GdbStackFramePayload struct {
 
 func (gdb *GdbClient) GetCurrentStackFrame() <-chan AsyncDecodedResult[GdbStackFramePayload] {
 	return SendDecodeAsync[GdbStackFramePayload](gdb, "stack-info-frame")
+}
+
+type GdbRegisterNamesPayload struct {
+	RegisterNames []string `mapstructure:"register-names"`
+}
+
+type RegisterValue struct {
+	Index string `mapstructure:"number"`
+	Value string `mapstructure:"value"`
+}
+
+type GdbRegisterValuesPayload struct {
+	RegisterValues []RegisterValue `mapstructure:"register-values"`
+}
+
+type Register struct {
+	Name   string
+	Number string
+	Value  string
+}
+
+func (gdb *GdbClient) GetRegisters() <-chan AsyncDecodedResult[[]Register] {
+	ch := make(chan AsyncDecodedResult[[]Register], 1)
+
+	go func() {
+
+		namesFut := SendDecodeAsync[GdbRegisterNamesPayload](gdb, "data-list-register-names")
+		valuesFut := SendDecodeAsync[GdbRegisterValuesPayload](gdb, "data-list-register-values", "x")
+
+		names := <-namesFut
+		values := <-valuesFut
+
+		if names.Error != nil {
+			ch <- AsyncDecodedResult[[]Register]{Error: names.Error}
+			return
+		}
+		if values.Error != nil {
+			ch <- AsyncDecodedResult[[]Register]{Error: values.Error}
+			return
+		}
+
+		length := len(values.Result.RegisterValues)
+		registers := make([]Register, 0, length)
+
+		for _, register := range values.Result.RegisterValues {
+			registerIndex, err := strconv.Atoi(register.Index)
+			if err != nil {
+				panic(err)
+			}
+
+			registers = append(registers, Register{
+				Name:  names.Result.RegisterNames[registerIndex],
+				Value: register.Value,
+			})
+		}
+
+		ch <- AsyncDecodedResult[[]Register]{Result: registers}
+	}()
+
+	return ch
 }
