@@ -1,10 +1,11 @@
 package main
 
 import (
-	"time"
+	"fmt"
 
 	"github.com/PawelReich/gogdb/client"
 	"github.com/PawelReich/gogdb/tui"
+	"github.com/spf13/pflag"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -94,15 +95,20 @@ func main() {
 	grid.AddItem(codeView.Pane, 0, 1, 1, 1, 0, 0, false)
 	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 2, 0, 0, false)
 
+	var commands []string
+	pflag.StringArrayVarP(&commands, "ex", "e", nil, "Commands to execute")
+	pflag.Parse()
+	fmt.Println(commands)
 	go func() {
-		time.Sleep(100 * time.Millisecond)
-		ret, err := gdb.Send("target-select", "remote", ":3333")
+		for _, command := range commands {
+			ret := <-gdb.SendConsoleCommandAsync(command)
 
-		if err != nil {
-			panic(err)
+			if ret.Error != nil {
+				app.LogError(err.Error())
+			}
+
+			app.LogMap(ret.Result)
 		}
-
-		app.LogMap(ret)
 	}()
 
 	err = app.Ui.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
