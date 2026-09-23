@@ -35,25 +35,29 @@ func main() {
 	commandPrompt := tui.NewCommandPrompt(app)
 	app.CommandPrompt = commandPrompt
 	diassemblyView := tui.NewDisassemblyView(app)
+	codeView := tui.NewCodeView(app)
 
 	go func() {
 		for notification := range gdb.Notifications() {
 
+			if notification["class"] == "stopped" {
+
+				frame, err := gdb.ParseFrame(notification)
+				if err != nil {
+					panic(err)
+				}
+
+				go func() {
+					diassemblyView.Update(frame)
+				}()
+				go func() {
+					codeView.Update(frame)
+				}()
+			}
+
 			app.Ui.QueueUpdateDraw(func() {
 				var color string
 				var str string
-
-				if notification["class"] == "stopped" {
-
-					frame, err := gdb.ParseFrame(notification)
-					if err != nil {
-						panic(err)
-					}
-
-					go func() {
-						diassemblyView.Update(frame)
-					}()
-				}
 
 				switch notification["type"] {
 				case "console":
@@ -107,8 +111,11 @@ func main() {
 
 	grid := tview.NewGrid()
 	grid.SetRows(0, 20)
+	grid.SetColumns(-1, -1)
+
 	grid.AddItem(diassemblyView.Pane, 0, 0, 1, 1, 0, 0, false)
-	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 1, 0, 0, false)
+	grid.AddItem(codeView.Pane, 0, 1, 1, 1, 0, 0, false)
+	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 2, 0, 0, false)
 
 	err = app.Ui.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
 	if err != nil {
