@@ -75,6 +75,8 @@ func main() {
 			return nil
 		case tcell.KeyTab:
 			if diassemblyView.Pane.HasFocus() {
+				app.Ui.SetFocus(codeView.Pane)
+			} else if codeView.Pane.HasFocus() {
 				app.Ui.SetFocus(commandPrompt.Pane)
 			} else {
 				app.Ui.SetFocus(diassemblyView.Pane)
