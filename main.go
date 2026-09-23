@@ -26,6 +26,7 @@ func main() {
 	app.CommandPrompt = commandPrompt
 	diassemblyView := tui.NewDisassemblyView(app)
 	codeView := tui.NewSourceView(app)
+	registersView := tui.NewRegistersView(app)
 
 	go func() {
 		for notification := range gdb.Notifications() {
@@ -42,6 +43,9 @@ func main() {
 				}()
 				go func() {
 					codeView.Update(frame)
+				}()
+				go func() {
+					registersView.Update(frame)
 				}()
 			}
 
@@ -88,12 +92,30 @@ func main() {
 	})
 
 	grid := tview.NewGrid()
-	grid.SetRows(0, 20)
-	grid.SetColumns(-1, -1)
+	// SetRows: Row 0 (dynamic), Row 1 (dynamic), Row 2 (fixed 3 lines for command prompt)
+	grid.SetRows(0, 0, 20)
 
-	grid.AddItem(diassemblyView.Pane, 0, 0, 1, 1, 0, 0, false)
-	grid.AddItem(codeView.Pane, 0, 1, 1, 1, 0, 0, false)
-	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 2, 0, 0, false)
+	// SetColumns: 3 columns of equal width (33% each)
+	grid.SetColumns(0, 0, 0)
+
+	// AddItem syntax:
+	// AddItem(component, row, column, rowSpan, colSpan, minHeight, minWidth, focus)
+
+	// 2. Code View (Top Left)
+	// Spans 2 rows (0 and 1) and 2 columns (0 and 1)
+	grid.AddItem(codeView.Pane, 0, 0, 2, 2, 0, 0, false)
+
+	// 3. Command Prompt (Bottom Left)
+	// Starts at row 2, spans 1 row tall, 2 columns wide
+	grid.AddItem(commandPrompt.Pane, 2, 0, 1, 2, 0, 0, true)
+
+	// 4. Disassembly (Top Right)
+	// Starts at row 0, column 2. Spans 1 row, 1 column.
+	grid.AddItem(diassemblyView.Pane, 0, 2, 1, 1, 0, 0, false)
+
+	// 5. Registers (Middle Right)
+	// Starts at row 1, column 2. Spans 1 row, 1 column.
+	grid.AddItem(registersView.Pane, 1, 2, 1, 1, 0, 0, false)
 
 	var commands []string
 	pflag.StringArrayVarP(&commands, "ex", "e", nil, "Commands to execute")
