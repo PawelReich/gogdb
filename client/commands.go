@@ -41,3 +41,40 @@ func (gdb *GdbClient) DisassembleAroundPC() <-chan AsyncDisassemblyResult {
 
 	return ch
 }
+
+type GdbStackFrame struct {
+	Address  string `mapstructure:"address"`
+	Function string `mapstructure:"func"`
+	FilePath string `mapstructure:"fullname"`
+	FileLine string `mapstructure:"line"`
+}
+
+type GdbStackFramePayload struct {
+	Frame GdbStackFrame `mapstructure:"frame"`
+}
+
+type AsyncStackFrameResult struct {
+	Result GdbStackFramePayload
+	Error  error
+}
+
+func (gdb *GdbClient) GetCurrentStackFrame() <-chan AsyncStackFrameResult {
+	ch := make(chan AsyncStackFrameResult, 1)
+
+	fut := gdb.SendAsync("stack-info-frame")
+	go func() {
+		res := <-fut
+		cmdres := AsyncStackFrameResult{}
+
+		if res.Error != nil {
+			cmdres.Error = res.Error
+		} else {
+			cmdres.Error = mapstructure.Decode(res.Result["payload"], &cmdres.Result)
+		}
+
+		ch <- cmdres
+		close(ch)
+	}()
+
+	return ch
+}
