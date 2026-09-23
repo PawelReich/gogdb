@@ -1,6 +1,9 @@
 package tui
 
 import (
+	"strings"
+
+	"github.com/PawelReich/gogdb/client"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -46,7 +49,21 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
 
-		fut := app.Debugger.SendAsync("interpreter-exec", "console", command)
+		var fut <-chan client.AsyncResult
+
+		if command[0] == '-' {
+			// Drop '-' as it is assumed in `SendAsync`
+			command = command[1:]
+			splitCmd := strings.Split(command, " ")
+
+			// Prepare MI command and its arguments
+			command = splitCmd[0]
+			splitCmd = splitCmd[1:]
+
+			fut = app.Debugger.SendAsync(command, splitCmd...)
+		} else {
+			fut = app.Debugger.SendAsync("interpreter-exec", "console", command)
+		}
 
 		go func() {
 			res := <-fut
