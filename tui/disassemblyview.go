@@ -12,19 +12,11 @@ import (
 )
 
 type DisassemblyView struct {
-	Pane *tview.TextView
-
-	app *GoGdb
+	*CodeView
 }
 
 func NewDisassemblyView(app *GoGdb) *DisassemblyView {
-	textView := tview.NewTextView()
-	textView.SetDynamicColors(true)
-	textView.SetScrollable(true)
-	textView.SetBorder(true)
-	textView.SetTitle(tview.Escape("Disassembly [none]"))
-
-	return &DisassemblyView{app: app, Pane: textView}
+	return &DisassemblyView{CodeView: NewCodeView(app, "Disassembly")}
 }
 
 func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
@@ -36,34 +28,37 @@ func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
 			panic(disas.Error)
 		}
 
-		title := tview.Escape(fmt.Sprintf("Disassembly [%s]", frame.Architecture))
-		view.Pane.SetTitle(title)
+		view.SetTitle(frame.Architecture)
+		prettyAssembly, pcLine := view.PrettyPrintDisassembly(&disas.Result, frame.Address)
+		view.Pane.SetText(prettyAssembly)
 
-		view.Pane.SetText(view.PrettyPrintDisassembly(&disas.Result, frame.Address))
+		view.CenterView(pcLine)
 	})
 }
 
-func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassemblyPayload, pc string) string {
+func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassemblyPayload, pc string) (string, int) {
 	var sb strings.Builder
+	pcLine := 0
 
 	lexer := lexers.Get("gas")
 
-	for _, insn := range disas.AsmInsns {
+	for i, insn := range disas.AsmInsns {
 
-		sb.WriteString("[grey::i]")
-		sb.WriteString(insn.Address)
-
-		sb.WriteString("[white::I]")
 		if insn.Address == pc {
-			sb.WriteString("->[::b]")
+			pcLine = i
+			sb.WriteString("[white::ib]")
 		} else {
-			sb.WriteString("  ")
+			sb.WriteString("[grey::i]")
+
 		}
+		sb.WriteString(insn.Address)
+		sb.WriteString(" [::I]│[::]")
 
 		iterator, err := lexer.Tokenise(nil, insn.Inst)
 		if err != nil {
 			panic(err)
 		}
+
 		for _, token := range iterator.Tokens() {
 			var colorTag string
 			switch token.Type.Category() {
@@ -85,7 +80,6 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 				} else {
 					colorTag = "[grey]"
 				}
-
 			default:
 				colorTag = "[white]"
 				view.app.LogError(fmt.Sprintf("FAILED %s = %s\n", token.Type.Category(), tview.Escape(token.Value)))
@@ -97,5 +91,5 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 		sb.WriteString("[::B]\n")
 	}
 
-	return sb.String()
+	return sb.String(), pcLine
 }

@@ -13,20 +13,11 @@ import (
 )
 
 type SourceView struct {
-	Pane *tview.TextView
-
-	app *GoGdb
+	*CodeView
 }
 
 func NewSourceView(app *GoGdb) *SourceView {
-
-	textView := tview.NewTextView()
-	textView.SetTitle("Source [none]")
-	textView.SetDynamicColors(true)
-	textView.SetScrollable(true)
-	textView.SetBorder(true)
-
-	return &SourceView{app: app, Pane: textView}
+	return &SourceView{CodeView: NewCodeView(app, "Source")}
 }
 
 func (view *SourceView) Update(frame *client.StoppedFrame) {
@@ -38,21 +29,15 @@ func (view *SourceView) Update(frame *client.StoppedFrame) {
 			panic(stackFrame.Error)
 		}
 
-		title := tview.Escape(fmt.Sprintf("Source [%s]", stackFrame.Result.Frame.Function))
-		view.Pane.SetTitle(title)
+		view.SetTitle(stackFrame.Result.Frame.Function)
 
 		view.Pane.SetText(view.PrettyPrintCode(&stackFrame.Result.Frame))
 
 		lineInt, err := strconv.Atoi(stackFrame.Result.Frame.FileLine)
 		if err != nil {
 			view.app.LogError(fmt.Sprintf("Error parsing file line from stack frame: %s", stackFrame.Result.Frame.FileLine))
-			lineInt = view.Pane.GetFieldHeight()
 		}
-		_, _, _, viewHeight := view.Pane.GetRect()
-		middlePosition := lineInt - viewHeight/2
-		view.app.LogError(fmt.Sprintf("lineInt: %d, fieldheight: %d, middlePosition: %d", lineInt, viewHeight, middlePosition))
-
-		view.Pane.ScrollTo(middlePosition, 0)
+		view.CenterView(lineInt)
 	})
 }
 
@@ -87,7 +72,7 @@ func (view *SourceView) PrettyPrintCode(frame *client.GdbStackFrame) string {
 		} else {
 			sb.WriteString("[grey::i]")
 		}
-		sb.WriteString(fmt.Sprintf("%*d", lineCounterWidth, line))
+		fmt.Fprintf(&sb, "%*d", lineCounterWidth, line)
 		sb.WriteString(" [::I]│[::]")
 
 		for _, token := range tokens {
