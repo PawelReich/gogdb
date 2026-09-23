@@ -53,6 +53,10 @@ func (gdb *GdbClient) SendAsync(operation string, args ...string) <-chan AsyncRe
 	return ch
 }
 
+func (gdb *GdbClient) SendConsoleCommandAsync(command string) <-chan AsyncResult {
+	return gdb.SendAsync("interpreter-exec", "console", command)
+}
+
 func (gdb *GdbClient) Close() {
 	if gdb.notifications != nil {
 		close(gdb.notifications)

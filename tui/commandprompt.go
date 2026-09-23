@@ -62,7 +62,7 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 
 			fut = app.Debugger.SendAsync(command, splitCmd...)
 		} else {
-			fut = app.Debugger.SendAsync("interpreter-exec", "console", command)
+			fut = app.Debugger.SendConsoleCommandAsync(command)
 		}
 
 		go func() {
