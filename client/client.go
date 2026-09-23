@@ -2,10 +2,16 @@ package client
 
 import (
 	"github.com/cyrus-and/gdb"
+	"github.com/mitchellh/mapstructure"
 )
 
 type AsyncResult struct {
 	Result map[string]any
+	Error  error
+}
+
+type AsyncDecodedResult[T any] struct {
+	Result T
 	Error  error
 }
 
@@ -50,6 +56,26 @@ func (gdb *GdbClient) SendAsync(operation string, args ...string) <-chan AsyncRe
 		ch <- AsyncResult{Result: res, Error: err}
 		close(ch)
 	}()
+	return ch
+}
+
+func SendDecodeAsync[T any](gdb *GdbClient, operation string, args ...string) <-chan AsyncDecodedResult[T] {
+	ch := make(chan AsyncDecodedResult[T], 1)
+	fut := gdb.SendAsync(operation, args...)
+	go func() {
+		res := <-fut
+		cmdres := AsyncDecodedResult[T]{}
+
+		if res.Error != nil {
+			cmdres.Error = res.Error
+		} else {
+			cmdres.Error = mapstructure.Decode(res.Result["payload"], &cmdres.Result)
+		}
+
+		ch <- cmdres
+		close(ch)
+	}()
+
 	return ch
 }
 
