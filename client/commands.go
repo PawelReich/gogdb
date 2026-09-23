@@ -1,6 +1,10 @@
 package client
 
-import "github.com/mitchellh/mapstructure"
+import (
+	"fmt"
+
+	"github.com/mitchellh/mapstructure"
+)
 
 func (gdb *GdbClient) Interrupt() {
 	gdb.gdb.Interrupt()
@@ -21,10 +25,10 @@ type AsyncDisassemblyResult struct {
 	Error  error
 }
 
-func (gdb *GdbClient) DisassembleAroundPC() <-chan AsyncDisassemblyResult {
+func (gdb *GdbClient) DisassembleAroundPC(byteRange int) <-chan AsyncDisassemblyResult {
 	ch := make(chan AsyncDisassemblyResult, 1)
 
-	fut := gdb.SendAsync("data-disassemble", "-s", "$pc-128", "-e", "$pc+128", "--", "0")
+	fut := gdb.SendAsync("data-disassemble", "-s", fmt.Sprintf("$pc-%d", byteRange/2), "-e", fmt.Sprintf("$pc+%d", byteRange/2), "--", "0")
 	go func() {
 		res := <-fut
 		cmdres := AsyncDisassemblyResult{}
