@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/PawelReich/gogdb/client"
@@ -41,6 +42,17 @@ func (view *CodeView) Update(frame *client.StoppedFrame) {
 		view.Pane.SetTitle(title)
 
 		view.Pane.SetText(view.PrettyPrintCode(&stackFrame.Result.Frame))
+
+		lineInt, err := strconv.Atoi(stackFrame.Result.Frame.FileLine)
+		if err != nil {
+			view.app.LogError(fmt.Sprintf("Error parsing file line from stack frame: %s", stackFrame.Result.Frame.FileLine))
+			lineInt = view.Pane.GetFieldHeight()
+		}
+		_, _, _, viewHeight := view.Pane.GetRect()
+		middlePosition := lineInt - viewHeight/2
+		view.app.LogError(fmt.Sprintf("lineInt: %d, fieldheight: %d, middlePosition: %d", lineInt, viewHeight, middlePosition))
+
+		view.Pane.ScrollTo(middlePosition, 0)
 	})
 }
 
