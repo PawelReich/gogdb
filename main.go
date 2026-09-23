@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/PawelReich/gogdb/client"
 	"github.com/PawelReich/gogdb/tui"
@@ -11,15 +9,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
-
-func flatten(value map[string]any) ([]byte, error) {
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(value)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
 
 func main() {
 	gdb, err := client.New()
@@ -55,48 +44,34 @@ func main() {
 				}()
 			}
 
-			app.Ui.QueueUpdateDraw(func() {
-				var color string
-				var str string
-
-				switch notification["type"] {
-				case "console":
-					fallthrough
-				case "log":
-					color = "blue"
-					str = notification["payload"].(string)
-				case "error":
-					color = "red"
-					str = notification["payload"].(string)
-				default:
-					color = "grey"
-					x, _ := flatten(notification)
-					str = string(x)
-				}
-				fmt.Fprintf(commandPrompt.History(), "[%s] %s", color, str)
-			})
+			// app.Ui.QueueUpdateDraw(func() {
+			// 	var color string
+			// 	var str string
+			//
+			// 	switch notification["type"] {
+			// 	case "console":
+			// 		fallthrough
+			// 	case "log":
+			// 		color = "blue"
+			// 		str = notification["payload"].(string)
+			// 	case "error":
+			// 		color = "red"
+			// 		str = notification["payload"].(string)
+			// 	default:
+			// 		return
+			// 	}
+			// 	fmt.Fprintf(commandPrompt.History(), "[%s] %s", color, str)
+			app.LogMap(notification)
+			// })
 		}
 	}()
-
-	ret, err := gdb.Send("target-select", "remote", ":3333")
-
-	if err != nil {
-		panic(err)
-	}
-
-	str, err := flatten(ret)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(str))
 
 	app.Ui.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlQ:
 			app.Ui.Stop()
 		case tcell.KeyCtrlC:
-			gdb.Interrupt()
+			app.Debugger.Interrupt()
 			return nil
 		case tcell.KeyTab:
 			if diassemblyView.Pane.HasFocus() {
@@ -116,6 +91,17 @@ func main() {
 	grid.AddItem(diassemblyView.Pane, 0, 0, 1, 1, 0, 0, false)
 	grid.AddItem(codeView.Pane, 0, 1, 1, 1, 0, 0, false)
 	grid.AddItem(commandPrompt.Pane, 1, 0, 1, 2, 0, 0, false)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		ret, err := gdb.Send("target-select", "remote", ":3333")
+
+		if err != nil {
+			panic(err)
+		}
+
+		app.LogMap(ret)
+	}()
 
 	err = app.Ui.SetRoot(grid, true).SetFocus(commandPrompt.Pane).Run()
 	if err != nil {
