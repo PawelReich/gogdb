@@ -25,7 +25,7 @@ func main() {
 	commandPrompt := tui.NewCommandPrompt(app)
 	app.CommandPrompt = commandPrompt
 	diassemblyView := tui.NewDisassemblyView(app)
-	codeView := tui.NewCodeView(app)
+	codeView := tui.NewSourceView(app)
 
 	go func() {
 		for notification := range gdb.Notifications() {

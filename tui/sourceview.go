@@ -12,24 +12,24 @@ import (
 	"github.com/rivo/tview"
 )
 
-type CodeView struct {
+type SourceView struct {
 	Pane *tview.TextView
 
 	app *GoGdb
 }
 
-func NewCodeView(app *GoGdb) *CodeView {
+func NewSourceView(app *GoGdb) *SourceView {
 
 	textView := tview.NewTextView()
-	textView.SetTitle("Code [none]")
+	textView.SetTitle("Source [none]")
 	textView.SetDynamicColors(true)
 	textView.SetScrollable(true)
 	textView.SetBorder(true)
 
-	return &CodeView{app: app, Pane: textView}
+	return &SourceView{app: app, Pane: textView}
 }
 
-func (view *CodeView) Update(frame *client.StoppedFrame) {
+func (view *SourceView) Update(frame *client.StoppedFrame) {
 
 	fut := view.app.Debugger.GetCurrentStackFrame()
 	view.app.Ui.QueueUpdateDraw(func() {
@@ -38,7 +38,7 @@ func (view *CodeView) Update(frame *client.StoppedFrame) {
 			panic(stackFrame.Error)
 		}
 
-		title := tview.Escape(fmt.Sprintf("Code [%s]", stackFrame.Result.Frame.Function))
+		title := tview.Escape(fmt.Sprintf("Source [%s]", stackFrame.Result.Frame.Function))
 		view.Pane.SetTitle(title)
 
 		view.Pane.SetText(view.PrettyPrintCode(&stackFrame.Result.Frame))
@@ -56,7 +56,7 @@ func (view *CodeView) Update(frame *client.StoppedFrame) {
 	})
 }
 
-func (view *CodeView) PrettyPrintCode(frame *client.GdbStackFrame) string {
+func (view *SourceView) PrettyPrintCode(frame *client.GdbStackFrame) string {
 	var sb strings.Builder
 
 	code, err := os.ReadFile(frame.FilePath)
@@ -66,6 +66,7 @@ func (view *CodeView) PrettyPrintCode(frame *client.GdbStackFrame) string {
 	codeString := string(code)
 
 	lexer := lexers.Match(frame.FilePath)
+	view.app.LogError(lexer.Config().Name)
 
 	iterator, err := lexer.Tokenise(nil, codeString)
 	tokens := iterator.Tokens()
