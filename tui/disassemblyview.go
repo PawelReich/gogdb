@@ -87,7 +87,8 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 				}
 
 			default:
-				colorTag = fmt.Sprintf("[-]\n:FAILED %s = %s\n", token.Type.Category(), tview.Escape(token.Value))
+				colorTag = "[white]"
+				view.app.LogError(fmt.Sprintf("FAILED %s = %s\n", token.Type.Category(), tview.Escape(token.Value)))
 			}
 			sb.WriteString(colorTag)
 			sb.WriteString(tview.Escape(token.Value))
