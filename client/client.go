@@ -118,14 +118,16 @@ func (gdb *GdbClient) Close() {
 }
 
 func (gdb *GdbClient) handleNotifications(notification map[string]any) {
-	gdb.notifications <- notification
 	if notification["type"] == "console" {
 		gdb.consoleCaptureMutex.Lock()
 		if gdb.consoleIsCapturing {
 			gdb.consoleCaptured.WriteString(notification["payload"].(string))
 		}
 		gdb.consoleCaptureMutex.Unlock()
+		return
 	}
+
+	gdb.notifications <- notification
 }
 
 func (gdb *GdbClient) Notifications() <-chan map[string]any {
