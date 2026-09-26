@@ -37,5 +37,5 @@ func (app *GoGdb) LogMap(value map[string]any) {
 	if err != nil {
 		app.LogError(err.Error())
 	}
-	app.LogInfo(buf.String())
+	app.LogDebug(buf.String())
 }
