@@ -109,11 +109,11 @@ func (gdb *GdbClient) SendConsoleCommandAsync(command string) <-chan AsyncDecode
 }
 
 func (gdb *GdbClient) Close() {
-	if gdb.notifications != nil {
-		close(gdb.notifications)
-	}
 	if gdb.gdb != nil {
 		gdb.gdb.Exit()
+	}
+	if gdb.notifications != nil {
+		close(gdb.notifications)
 	}
 }
 
