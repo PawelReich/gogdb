@@ -33,6 +33,7 @@ type GdbClient struct {
 func New() (*GdbClient, error) {
 	gdbClient := &GdbClient{
 		notifications: make(chan map[string]any, 512),
+		symbolLookup:  make(map[string]string),
 	}
 
 	gdb, err := gdb.New(gdbClient.handleNotifications)
