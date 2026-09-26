@@ -20,8 +20,7 @@ func NewDisassemblyView(app *GoGdb) *DisassemblyView {
 }
 
 func (view *DisassemblyView) Update(frame *client.StoppedFrame) {
-
-	fut := view.app.Debugger.DisassembleAroundPC(512)
+	fut := view.app.Debugger.DisassembleAroundPC(256)
 	view.app.Ui.QueueUpdateDraw(func() {
 		disas := <-fut
 		if disas.Error != nil {
