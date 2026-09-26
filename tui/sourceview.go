@@ -98,7 +98,7 @@ func (view *SourceView) PrettyPrintCode(frame *client.GdbStackFrame) string {
 
 			default:
 				colorTag = "[white]"
-				view.app.LogError(fmt.Sprintf("FAILED %s = %s\n", token.Type.Category(), tview.Escape(token.Value)))
+				// view.app.LogError(fmt.Sprintf("FAILED %s = %s\n", token.Type.Category(), tview.Escape(token.Value)))
 			}
 			sb.WriteString(colorTag)
 			sb.WriteString(tview.Escape(token.Value))
