@@ -85,7 +85,10 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 }
 
 func (view *CommandPrompt) LogColorf(color string, format string, args ...any) {
-	message := fmt.Sprintf(format, args...)
+	message := format
+	if len(args) > 0 {
+		message = fmt.Sprintf(format, args...)
+	}
 	fmt.Fprintf(view.history, "[%s]%s[-]\n", color, message)
 
 	view.input.SetText("")
