@@ -25,7 +25,12 @@ func (app *GoGdb) LogError(message string) {
 
 func (app *GoGdb) LogMap(value map[string]any) {
 	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(value)
+
+	encoder := json.NewEncoder(&buf)
+	encoder.SetIndent("", "\t")
+
+	err := encoder.Encode(value)
+
 	if err != nil {
 		app.LogError(err.Error())
 	}
