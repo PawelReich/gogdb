@@ -80,15 +80,20 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 	flex.AddItem(cmdPrompt, 1, 0, true)
 
 	flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		_, _, _, pageSize := view.history.GetRect()
 		switch event.Key() {
 		case tcell.KeyPgUp:
-			cmdHistory.ScrollTo(-20, 0)
+			view.ScrollBy(-pageSize)
 		case tcell.KeyPgDn:
-			cmdHistory.ScrollTo(20, 0)
+			view.ScrollBy(pageSize)
 		case tcell.KeyUp:
-			cmdHistory.ScrollTo(-1, 0)
+			view.ScrollBy(-1)
 		case tcell.KeyDown:
-			cmdHistory.ScrollTo(1, 0)
+			view.ScrollBy(1)
+		case tcell.KeyHome:
+			view.History().ScrollToBeginning()
+		case tcell.KeyEnd:
+			view.History().ScrollToEnd()
 		}
 		return event
 	})
@@ -98,4 +103,16 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 
 func (view *CommandPrompt) History() *tview.TextView {
 	return view.history
+}
+
+func (view *CommandPrompt) ScrollBy(lines int) {
+	offset, _ := view.history.GetScrollOffset()
+	if offset < 0 {
+		offset = 0
+	}
+	offset += lines
+	if offset < 0 {
+		offset = 0
+	}
+	view.history.ScrollTo(offset, 0)
 }
