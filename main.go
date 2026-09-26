@@ -60,16 +60,16 @@ func main() {
 				for strings.Contains(consoleLog, "\n") {
 					idx := strings.Index(consoleLog, "\n")
 					log := consoleLog[:idx]
-					app.LogInfo(log)
 					consoleLog = consoleLog[idx+1:]
+					app.LogInfo(log)
 				}
 			case "error":
 				errorLog += notification["payload"].(string)
 				for strings.Contains(errorLog, "\n") {
 					idx := strings.Index(errorLog, "\n")
 					log := errorLog[:idx]
+					errorLog = errorLog[idx+1:]
 					app.LogError(log)
-					consoleLog = consoleLog[idx+1:]
 				}
 			}
 			app.LogMap(notification)
