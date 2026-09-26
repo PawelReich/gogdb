@@ -1,6 +1,9 @@
 package client
 
 import (
+	"strings"
+	"sync"
+
 	"github.com/cyrus-and/gdb"
 	"github.com/mitchellh/mapstructure"
 )
@@ -16,7 +19,12 @@ type AsyncDecodedResult[T any] struct {
 }
 
 type GdbClient struct {
-	gdb           *gdb.Gdb
+	gdb *gdb.Gdb
+
+	consoleCaptureMutex sync.Mutex
+	consoleIsCapturing  bool
+	consoleCaptured     strings.Builder
+
 	notifications chan map[string]any
 }
 
@@ -25,9 +33,7 @@ func New() (*GdbClient, error) {
 		notifications: make(chan map[string]any, 512),
 	}
 
-	gdb, err := gdb.New(func(notification map[string]any) {
-		gdbClient.notifications <- notification
-	})
+	gdb, err := gdb.New(gdbClient.handleNotifications)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +85,27 @@ func SendDecodeAsync[T any](gdb *GdbClient, operation string, args ...string) <-
 	return ch
 }
 
-func (gdb *GdbClient) SendConsoleCommandAsync(command string) <-chan AsyncResult {
-	return gdb.SendAsync("interpreter-exec", "console", command)
+func (gdb *GdbClient) SendConsoleCommandAsync(command string) <-chan AsyncDecodedResult[string] {
+
+	ch := make(chan AsyncDecodedResult[string], 1)
+
+	go func() {
+		gdb.consoleCaptureMutex.Lock()
+		gdb.consoleIsCapturing = true
+		gdb.consoleCaptured.Reset()
+		gdb.consoleCaptureMutex.Unlock()
+
+		_, err := gdb.Send("interpreter-exec", "console", command)
+
+		ch <- AsyncDecodedResult[string]{gdb.consoleCaptured.String(), err}
+		close(ch)
+
+		gdb.consoleCaptureMutex.Lock()
+		gdb.consoleIsCapturing = false
+		gdb.consoleCaptureMutex.Unlock()
+	}()
+
+	return ch
 }
 
 func (gdb *GdbClient) Close() {
@@ -89,6 +114,17 @@ func (gdb *GdbClient) Close() {
 	}
 	if gdb.gdb != nil {
 		gdb.gdb.Exit()
+	}
+}
+
+func (gdb *GdbClient) handleNotifications(notification map[string]any) {
+	gdb.notifications <- notification
+	if notification["type"] == "console" {
+		gdb.consoleCaptureMutex.Lock()
+		if gdb.consoleIsCapturing {
+			gdb.consoleCaptured.WriteString(notification["payload"].(string))
+		}
+		gdb.consoleCaptureMutex.Unlock()
 	}
 }
 

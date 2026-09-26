@@ -49,7 +49,7 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
 
-		var fut <-chan client.AsyncResult
+		var fut <-chan client.AsyncDecodedResult[string]
 
 		if command[0] == '-' {
 			// Drop '-' as it is assumed in `SendAsync`
@@ -60,14 +60,14 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 			command = splitCmd[0]
 			splitCmd = splitCmd[1:]
 
-			fut = app.Debugger.SendAsync(command, splitCmd...)
+			fut = client.SendDecodeAsync[string](app.Debugger, command, splitCmd...)
 		} else {
 			fut = app.Debugger.SendConsoleCommandAsync(command)
 		}
 
 		go func() {
 			res := <-fut
-			app.LogMap(res.Result)
+			app.LogInfo(res.Result)
 
 			cmdPrompt.SetText("")
 			cmdHistory.ScrollToEnd()

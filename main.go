@@ -129,7 +129,7 @@ func main() {
 				app.LogError(err.Error())
 			}
 
-			app.LogMap(ret.Result)
+			app.LogInfo(ret.Result)
 		}
 	}()
 
