@@ -51,7 +51,6 @@ func (view *SourceView) PrettyPrintCode(frame *client.GdbStackFrame) string {
 	codeString := string(code)
 
 	lexer := lexers.Match(frame.FilePath)
-	view.app.LogError(lexer.Config().Name)
 
 	iterator, err := lexer.Tokenise(nil, codeString)
 	tokens := iterator.Tokens()
