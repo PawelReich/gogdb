@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -47,6 +48,10 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 		}
 
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
+
+		if command == "q" || command == "quit" {
+			os.Exit(0)
+		}
 
 		if command[0] == '-' {
 			// Drop '-' as it is assumed in `SendAsync`
