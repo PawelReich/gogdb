@@ -25,6 +25,8 @@ type GdbClient struct {
 	consoleCaptureMutex sync.Mutex
 	consoleCaptured     *strings.Builder
 
+	symbolLookup map[string]string
+
 	notifications chan map[string]any
 }
 
