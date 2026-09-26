@@ -43,7 +43,7 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 
 	for i, insn := range disas.AsmInsns {
 
-		sym := <-view.app.Debugger.GetSymbol(insn.Address)
+		sym := <-view.app.Debugger.GetCachedSymbol(insn.Address)
 
 		if insn.Address == pc {
 			pcLine = i
