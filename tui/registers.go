@@ -40,7 +40,7 @@ func (view *RegistersView) Update(frame *client.StoppedFrame) {
 
 		modifier := "::"
 		if view.oldRegisters != nil && view.oldRegisters[i].Value != reg.Value {
-			modifier = ":darkblue:b"
+			modifier = "red::b"
 		}
 
 		sym := <-view.app.Debugger.GetSymbol("$" + reg.Name)
