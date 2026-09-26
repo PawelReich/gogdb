@@ -43,6 +43,8 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 
 	for i, insn := range disas.AsmInsns {
 
+		sym := <-view.app.Debugger.GetSymbol(insn.Address)
+
 		if insn.Address == pc {
 			pcLine = i
 			sb.WriteString("[white::ib]")
@@ -51,7 +53,9 @@ func (view *DisassemblyView) PrettyPrintDisassembly(disas *client.GdbAsmDisassem
 
 		}
 		sb.WriteString(insn.Address)
-		sb.WriteString(" [::I]│[::]")
+		sb.WriteString(" [::I] ")
+		fmt.Fprintf(&sb, "%*s", 25, sym.Result)
+		sb.WriteString("│[::] ")
 
 		iterator, err := lexer.Tokenise(nil, insn.Inst)
 		if err != nil {
