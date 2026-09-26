@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sync"
 )
 
+var logMu sync.Mutex
+
 func (app *GoGdb) LogColor(message string, color string) {
+	logMu.Lock()
 	fmt.Fprintf(app.CommandPrompt.History(), "[%s]%s[-]\n", color, message)
+	logMu.Unlock()
 }
 
 func (app *GoGdb) LogInfo(message string) {
