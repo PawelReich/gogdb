@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 func (gdb *GdbClient) Interrupt() {
@@ -93,6 +94,27 @@ func (gdb *GdbClient) GetRegisters() <-chan AsyncDecodedResult[[]Register] {
 		}
 
 		ch <- AsyncDecodedResult[[]Register]{Result: registers}
+	}()
+
+	return ch
+}
+
+func (gdb *GdbClient) GetSymbol(sym string) <-chan AsyncDecodedResult[string] {
+	ch := make(chan AsyncDecodedResult[string], 1)
+
+	go func() {
+		defer close(ch)
+		res := <-gdb.SendConsoleCommandAsync("info symbol " + sym)
+		if res.Error != nil {
+			ch <- res
+			return
+		}
+
+		if strings.Contains(res.Result, "No symbol matches") {
+			res.Result = ""
+		}
+		res.Result = strings.Split(res.Result, " in ")[0]
+		ch <- res
 	}()
 
 	return ch
