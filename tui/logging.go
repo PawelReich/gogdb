@@ -3,24 +3,27 @@ package tui
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"sync"
 )
 
 var logMu sync.Mutex
 
-func (app *GoGdb) LogColor(message string, color string) {
+func (app *GoGdb) LogColor(color string, message string, args ...any) {
 	logMu.Lock()
-	fmt.Fprintf(app.CommandPrompt.History(), "[%s]%s[-]\n", color, message)
+	app.CommandPrompt.LogColorf(color, message, args...)
 	logMu.Unlock()
 }
 
-func (app *GoGdb) LogInfo(message string) {
-	app.LogColor(message, "grey")
+func (app *GoGdb) LogInfo(message string, args ...any) {
+	app.LogColor("white", message, args...)
 }
 
-func (app *GoGdb) LogError(message string) {
-	app.LogColor(message, "red")
+func (app *GoGdb) LogDebug(message string, args ...any) {
+	app.LogColor("grey", message, args...)
+}
+
+func (app *GoGdb) LogError(message string, args ...any) {
+	app.LogColor("red", message, args...)
 }
 
 func (app *GoGdb) LogMap(value map[string]any) {

@@ -64,9 +64,6 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 			res := <-app.Debugger.SendConsoleCommandAsync(command)
 			app.LogInfo(res.Result)
 		}
-		view.history.ScrollToEnd()
-		view.input.SetText("")
-
 	})
 
 	flex.SetBorder(true)
@@ -87,6 +84,10 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 	return view
 }
 
-func (view *CommandPrompt) History() *tview.TextView {
-	return view.history
+func (view *CommandPrompt) LogColorf(color string, format string, args ...any) {
+	message := fmt.Sprintf(format, args...)
+	fmt.Fprintf(view.history, "[%s]%s[-]\n", color, message)
+
+	view.input.SetText("")
+	view.history.ScrollToEnd()
 }

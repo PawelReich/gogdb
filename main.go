@@ -29,6 +29,9 @@ func main() {
 	registersView := tui.NewRegistersView(app)
 
 	go func() {
+		var errorLog string
+		var consoleLog string
+
 		for notification := range gdb.Notifications() {
 
 			if notification["class"] == "stopped" {
@@ -49,25 +52,27 @@ func main() {
 				}()
 			}
 
-			// app.Ui.QueueUpdateDraw(func() {
-			// 	var color string
-			// 	var str string
-			//
-			// 	switch notification["type"] {
-			// 	case "console":
-			// 		fallthrough
-			// 	case "log":
-			// 		color = "blue"
-			// 		str = notification["payload"].(string)
-			// 	case "error":
-			// 		color = "red"
-			// 		str = notification["payload"].(string)
-			// 	default:
-			// 		return
-			// 	}
-			// 	fmt.Fprintf(commandPrompt.History(), "[%s] %s", color, str)
+			switch notification["type"] {
+			case "console":
+				fallthrough
+			case "log":
+				consoleLog += notification["payload"].(string)
+				for strings.Contains(consoleLog, "\n") {
+					idx := strings.Index(consoleLog, "\n")
+					log := consoleLog[:idx]
+					app.LogInfo(log)
+					consoleLog = consoleLog[idx+1:]
+				}
+			case "error":
+				errorLog += notification["payload"].(string)
+				for strings.Contains(errorLog, "\n") {
+					idx := strings.Index(errorLog, "\n")
+					log := errorLog[:idx]
+					app.LogError(log)
+					consoleLog = consoleLog[idx+1:]
+				}
+			}
 			app.LogMap(notification)
-			// })
 		}
 	}()
 
