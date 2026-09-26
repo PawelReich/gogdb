@@ -21,9 +21,9 @@ type AsyncDecodedResult[T any] struct {
 type GdbClient struct {
 	gdb *gdb.Gdb
 
+	consoleMutex        sync.Mutex
 	consoleCaptureMutex sync.Mutex
-	consoleIsCapturing  bool
-	consoleCaptured     strings.Builder
+	consoleCaptured     *strings.Builder
 
 	notifications chan map[string]any
 }
@@ -90,22 +90,30 @@ func (gdb *GdbClient) SendConsoleCommandAsync(command string) <-chan AsyncDecode
 	ch := make(chan AsyncDecodedResult[string], 1)
 
 	go func() {
-		gdb.consoleCaptureMutex.Lock()
-		gdb.consoleIsCapturing = true
-		gdb.consoleCaptured.Reset()
-		gdb.consoleCaptureMutex.Unlock()
+		defer close(ch)
+
+		gdb.consoleMutex.Lock()
+		defer gdb.consoleMutex.Unlock()
+
+		var captured strings.Builder
+		gdb.setConsoleCapture(&captured)
+		defer gdb.setConsoleCapture(nil)
 
 		_, err := gdb.Send("interpreter-exec", "console", command)
 
-		ch <- AsyncDecodedResult[string]{gdb.consoleCaptured.String(), err}
-		close(ch)
+		gdb.setConsoleCapture(nil)
+		result := captured.String()
 
-		gdb.consoleCaptureMutex.Lock()
-		gdb.consoleIsCapturing = false
-		gdb.consoleCaptureMutex.Unlock()
+		ch <- AsyncDecodedResult[string]{result, err}
 	}()
 
 	return ch
+}
+
+func (gdb *GdbClient) setConsoleCapture(capture *strings.Builder) {
+	gdb.consoleCaptureMutex.Lock()
+	gdb.consoleCaptured = capture
+	gdb.consoleCaptureMutex.Unlock()
 }
 
 func (gdb *GdbClient) Close() {
@@ -119,12 +127,14 @@ func (gdb *GdbClient) Close() {
 
 func (gdb *GdbClient) handleNotifications(notification map[string]any) {
 	if notification["type"] == "console" {
+		payload := notification["payload"].(string)
 		gdb.consoleCaptureMutex.Lock()
-		if gdb.consoleIsCapturing {
-			gdb.consoleCaptured.WriteString(notification["payload"].(string))
+		if gdb.consoleCaptured != nil {
+			gdb.consoleCaptured.WriteString(payload)
+			gdb.consoleCaptureMutex.Unlock()
+			return
 		}
 		gdb.consoleCaptureMutex.Unlock()
-		return
 	}
 
 	gdb.notifications <- notification
