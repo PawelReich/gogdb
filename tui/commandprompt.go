@@ -3,7 +3,6 @@ package tui
 import (
 	"strings"
 
-	"github.com/PawelReich/gogdb/client"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -49,8 +48,6 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 
 		fmt.Fprintf(cmdHistory, "[white]%s%s\n", Prompt, command)
 
-		var fut <-chan client.AsyncDecodedResult[string]
-
 		if command[0] == '-' {
 			// Drop '-' as it is assumed in `SendAsync`
 			command = command[1:]
@@ -60,18 +57,16 @@ func NewCommandPrompt(app *GoGdb) *CommandPrompt {
 			command = splitCmd[0]
 			splitCmd = splitCmd[1:]
 
-			fut = client.SendDecodeAsync[string](app.Debugger, command, splitCmd...)
+			res := <-app.Debugger.SendAsync(command, splitCmd...)
+			app.LogMap(res.Result)
+
 		} else {
-			fut = app.Debugger.SendConsoleCommandAsync(command)
-		}
-
-		go func() {
-			res := <-fut
+			res := <-app.Debugger.SendConsoleCommandAsync(command)
 			app.LogInfo(res.Result)
+		}
+		view.history.ScrollToEnd()
+		view.input.SetText("")
 
-			cmdPrompt.SetText("")
-			cmdHistory.ScrollToEnd()
-		}()
 	})
 
 	flex.SetBorder(true)
